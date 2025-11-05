@@ -10,9 +10,9 @@ pub fn sa_from_sp(sp: f64) -> f64 {
 
 /// Conservative Temperature (CT) from in-situ temperature t.
 /// Currently a placeholder: CT ≈ t. The difference CT−t is small near
-/// surface pressures but non-zero in general. Replace with a proper
-/// t→CT conversion when the gsw crate exposes it.
+/// surface pressures but non-zero in general.
 pub fn ct_from_t(_sa: f64, temp: f64, _p_dbar: f64) -> f64 {
+    // Todo: Replace with a proper t→CT conversion when the gsw crate exposes it.
     temp
 }
 
