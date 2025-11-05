@@ -16,7 +16,7 @@ def main():
 
     cmd = [
         "cargo",
-        "run",
+        "run", # can be replaced with the path to the compiled binary
         "--manifest-path",
         cargo_toml,
         "--quiet",
