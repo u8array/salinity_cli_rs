@@ -178,8 +178,8 @@ If Cl⁻ is not provided, solve from
 \sum_i z_i n_i = 0.
 ```
 
-Positive: $\mathrm{Na^+}, \mathrm{Mg^{2+}}, \mathrm{Ca^{2+}}, \mathrm{K^+}, \mathrm{Sr^{2+}}$.  
-Negative: $2\,\mathrm{SO_4^{2-}}, \mathrm{Br^-}, \mathrm{F^-}, \mathrm{B(OH)_4^-}, \mathrm{HCO_3^-}, \mathrm{CO_3^{2-}}, \mathrm{OH^-}$.  
+Cations: $\mathrm{Na^+}, \mathrm{Mg^{2+}}, \mathrm{Ca^{2+}}, \mathrm{K^+}, \mathrm{Sr^{2+}}$.  
+Anions: $2\,\mathrm{SO_4^{2-}}, \mathrm{Br^-}, \mathrm{F^-}, \mathrm{B(OH)_4^-}, \mathrm{HCO_3^-}, \mathrm{CO_3^{2-}}, \mathrm{OH^-}$.  
 Assign the residual negative charge to $\mathrm{Cl^-}$ and clamp at zero if needed.
 
 ### Reference mass per kg
@@ -227,28 +227,28 @@ Convergence is fast because the density feedback is weak in this range.
 
 - Convert `SP→SA`:
 
-  ```math
-  SA \approx SP\cdot\frac{SR_{\mathrm{REF}}}{35}.
-  ```
+```math
+SA \approx SP\cdot\frac{SR_{\mathrm{REF}}}{35}.
+```
 
 - Conservative temperature:
 
-  ```math
-  CT = \mathrm{CT\_from\_t}(SA, T, p).
-  ```
+```math
+CT = \mathrm{CT\_from\_t}(SA, T, p).
+```
 
 - Density:
 
-  ```math
-  \rho = \mathrm{\rho}(SA, CT, p).
-  ```
+```math
+\rho = \mathrm{\rho}(SA, CT, p).
+```
 
 - Specific gravity at $t_\mathrm{ref}$:
 
-  ```math
-  SG(t_\mathrm{ref}/t_\mathrm{ref})=
-  \frac{\rho_{\mathrm{sw}}(SA,t_\mathrm{ref},p_\mathrm{ref})}{\rho_{\mathrm{pw}}(SA{=}0,t_\mathrm{ref},p_\mathrm{ref})}.
-  ```
+```math
+SG(t_\mathrm{ref}/t_\mathrm{ref})=
+\frac{\rho_{\mathrm{sw}}(SA,t_\mathrm{ref},p_\mathrm{ref})}{\rho_{\mathrm{pw}}(SA{=}0,t_\mathrm{ref},p_\mathrm{ref})}.
+```
 
 ### Component reporting and normalization
 
