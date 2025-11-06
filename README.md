@@ -1,36 +1,77 @@
 
-# salinity_cli_rs
+# salinity_teos_10
 
-Command-line tool to estimate **Practical Salinity** `SP`, **Absolute Salinity** `SA`, **density** `ρ`, and optional component balances from macro chemical analyses of seawater or reef aquaria.  
-Calculations follow TEOS-10 conventions and couple charge/mass balances with density via a simple fixed-point iteration.
+Command-line tool to estimate **Practical Salinity** `SP`, **Absolute Salinity** `SA`, **density** `ρ`, and specific gravities from macro chemical analyses of seawater or reef aquaria.  
+Calculations follow TEOS-10 conventions and couple charge/mass balances with density via a simple fixed-point iteration. The library contains hooks for component tables; the current CLI outputs a concise summary (SP, SA, ρ, SG).
 
 ## Features
 
 - Compute `SP` and `SA` from elemental/ionic analyses
 - TEOS-10 density `ρ(SA,CT,p)` and specific gravity at a reference temperature
 - Self-consistent conversion between mg/L and mg/kg via `ρ`
-- Optional component tables in mg/L and mg/kg, plus normalization to `SP = 35`
 - Chloride estimation from electroneutrality if not measured
 - Configurable assumptions: temperature `T`, pressure `p`, alkalinity, borate fraction
+- Library support for component tables (mg/L, mg/kg, SP=35 normalization). Note: current CLI prints summary only.
 
 ## Install
 
-## Quick start
+Requires the latest stable Rust toolchain.
 
-Example with concentrations in mg/L, `T=20 °C`, `p=0 dbar`, and total alkalinity `8 dKH`:
+Build locally:
 
 ```bash
-salinity_cli_rs \
-  --na 10780 --mg 1290 --ca 420 --k 400 --sr 8 \
-  --br 65 --cl auto --f 1.3 \
-  --s 900 --b 4.4 \
-  --temp 20 --pressure 0 \
-  --alk-dkh 8 \
-  --assume-borate true \
-  --return-components
+cargo build --release
 ```
 
-`--cl auto` triggers Cl⁻ from charge balance. `--return-components` prints mg/L, mg/kg, and SP-35 normalized values.
+Optional: install the binary into your Cargo bin directory:
+
+```bash
+cargo install --path .
+```
+
+## Quick start
+
+Example with concentrations in mg/L, `t = 20 °C`, `p = 0 dbar`, and total alkalinity `8 dKH`.
+
+Two invocation methods are supported:
+
+1. Inline JSON (on the command line)
+
+```bash
+salinity_teos_10 --inputs-json '{
+  "na":10780, "mg":1290, "ca":420, "k":400, "sr":8,
+  "br":65, "s":900, "b":4.4,
+  "t_c":20, "p_dbar":0, "alk_dkh":8,
+  "return_components":true
+}'
+```
+
+1. File-based (file contains an object with `inputs` and optional `assumptions`)
+
+`inputs.json`
+
+```json
+{
+  "inputs": {
+    "na":10780, "mg":1290, "ca":420, "k":400, "sr":8,
+    "br":65, "s":900, "b":4.4,
+    "t_c":20, "p_dbar":0, "alk_dkh":8,
+    "return_components": true
+  }
+}
+```
+
+Run:
+
+```bash
+salinity_teos_10 --input inputs.json
+```
+
+Notes:
+
+- To automatically estimate Cl⁻ via electroneutrality, omit `cl` in JSON or set it to `null`.
+- For structured JSON output, add `--json`.
+- The library supports component tables when `"return_components": true`. The current CLI ignores this flag and prints a summary only.
 
 ---
 
@@ -95,7 +136,7 @@ Assign the residual negative charge to $\mathrm{Cl^-}$ and clamp at zero if need
 
 A reference composition in mmol/kg is converted to g/kg using molar masses. Two corrections apply:
 
-1. Replace elemental B by chosen species masses $ \mathrm{B(OH)_3},\ \mathrm{B(OH)_4^-}$ per $\alpha_B$.
+1. Replace elemental B by chosen species masses $\mathrm{B(OH)_3},\ \mathrm{B(OH)_4^-}$ per $\alpha_B$.
 2. Optionally add a reference alkalinity mass from a chosen `ref_alk_dKH` (default 8.0; 6.2 available for RN compatibility).
 
 Denote the resulting reference total as $\Sigma^{\mathrm{ref}}_{\mathrm{g/kg}}$.
@@ -119,7 +160,7 @@ $$
 Because $ρ$ depends on $SA$ and $CT$, and $SA$ depends on $SP$, iterate to a fixed point:
 
 1. Initialize $SP=35$, $SA = SP\cdot SR_{\mathrm{REF}}/35$.
-2. Compute $CT=\mathrm{CT}(SA,T,p)$, $ρ=\mathrm{ρ}(SA,CT,p)$ via TEOS-10.
+2. Compute $CT=\mathrm{CT}(SA,T,p)$, $ρ=\mathrm{ρ}(SA,CT,p)$ via TEOS-10. In the current implementation, $CT$ is approximated by in-situ $t$ (CT ≈ t), which is adequate near 0 dbar.
 3. Convert all component g/L to g/kg using $ρ$ and sum to $\Sigma_{\mathrm{g/kg}}$.
 4. Update $SR$, $SP$, $SA$.
 5. Stop when $|SP_{\text{new}}-SP|<\varepsilon$.
@@ -155,30 +196,34 @@ $$
 
 ---
 
-## CLI options (subset)
+## CLI usage
 
-- `--na --mg --ca --k --sr --br --cl --f --s --b` concentrations in mg/L (`--cl auto` for charge-balance estimate)
-- `--temp` °C, `--pressure` dbar
-- `--alk-dkh` total alkalinity in dKH
-- `--assume-borate true|false`, `--borate-fraction 0..1`
-- `--ref-alk-dkh` reference alkalinity for reference mass construction
-- `--return-components` print mg/L, mg/kg, SP-35 normalized
-- `--sg-at 20|25` specific gravity at 20/20 or 25/25
+The binary accepts JSON inputs for measurements and assumptions:
 
-The exact flag names follow the current binary.
+- `--inputs-json <JSON>`: Inline JSON for input values (schema like `Inputs`).
+- `--assumptions-json <JSON>`: Optional, adds/overrides assumptions (schema like `Assumptions`).
+- `--input <FILE>`: Read a file containing an object with `inputs` and optional `assumptions`. Use `-` for stdin.
+- `--json`: Output in JSON format (otherwise human-readable lines for SP/SA/Density/SG).
+
+JSON fields (excerpt):
+
+- Inputs (mg/L unless noted): `na, ca, mg, k, sr, br, s, b, cl` (optional; omit or set `null` for auto-estimate), `f` (optional)
+- Conditions: `t_c` (°C, default 20), `p_dbar` (dbar, default 0)
+- Alkalinity/options: `alk_dkh` (dKH), `assume_borate` (default true), `borate_fraction`, `ref_alk_dkh` (default 8.0), `alk_mg_per_meq`, `default_f_mg_l` (default 1.296), `return_components` (default false; currently ignored by CLI output)
 
 ---
 
 ## Output example
 
 ```text
-SP: 34.98
-SA: 35.16 g/kg
-rho: 1024.6 kg/m^3
-SG(20/20): 1.0260
+SP: 34.9800
+SA: 35.1600 g/kg
+Density: 1024.600 kg/m^3
+SG 20/20: 1.02600
+SG 25/25: 1.02480
 ```
 
-With `--return-components`, the tool adds component tables in mg/L, mg/kg, and SP-35 normalization.
+Note: Component tables (mg/L, mg/kg, SP=35 normalization) are supported in the library API; the current CLI prints the summary shown above.
 
 ## Assumptions and limits
 
@@ -199,8 +244,4 @@ Compare `SP` against conductivity-derived `SP` and ensure TEOS-10 `ρ(SA,CT,p)` 
 
 ## Build
 
-Requires last stable Rust Toolchain.
-
-```bash
-cargo build --release
-```
+Requires the latest stable Rust toolchain (see Install above).
