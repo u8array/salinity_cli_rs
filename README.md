@@ -1,8 +1,10 @@
 
-# salinity_teos_10
+# salinity_cli_rs
 
 Command-line tool to estimate **Practical Salinity** `SP`, **Absolute Salinity** `SA`, **density** `ρ`, and specific gravities from macro chemical analyses of seawater or reef aquaria.  
 Calculations follow TEOS-10 conventions and couple charge/mass balances with density via a simple fixed-point iteration. The library contains hooks for component tables; the current CLI outputs a concise summary (SP, SA, ρ, SG).
+
+Note: The binary name is `salinity_teos_10`.
 
 ## Features
 
@@ -13,21 +15,77 @@ Calculations follow TEOS-10 conventions and couple charge/mass balances with den
 - Configurable assumptions: temperature `T`, pressure `p`, alkalinity, borate fraction
 - Library support for component tables (mg/L, mg/kg, SP=35 normalization). Note: current CLI prints summary only.
 
-## Install
+## CLI usage
 
-Requires the latest stable Rust toolchain.
+The binary accepts JSON inputs for measurements and assumptions:
 
-Build locally:
+- `--inputs-json <JSON>`: Inline JSON for input values (schema like `Inputs`).
+- `--assumptions-json <JSON>`: Optional, adds/overrides assumptions (schema like `Assumptions`).
+- `--input <FILE>`: Read a file containing an object with `inputs` and optional `assumptions`. Use `-` for stdin.
+- `--json`: Output in JSON format (otherwise human-readable lines for SP/SA/Density/SG).
 
-```bash
-cargo build --release
+JSON fields (excerpt):
+
+- Inputs (mg/L unless noted): `na, ca, mg, k, sr, br, s, b, cl` (optional; omit or set `null` for auto-estimate), `f` (optional)
+- Conditions: `t_c` (°C, default 20), `p_dbar` (dbar, default 0)
+- Alkalinity/options: `alk_dkh` (dKH), `assume_borate` (default true), `borate_fraction`, `ref_alk_dkh` (default 8.0), `alk_mg_per_meq`, `default_f_mg_l` (default 1.296), `return_components` (default false; currently ignored by CLI output)
+
+---
+
+## Output example
+
+```text
+SP: 34.9800
+SA: 35.1600 g/kg
+Density: 1024.600 kg/m^3
+SG 20/20: 1.02600
+SG 25/25: 1.02480
 ```
 
-Optional: install the binary into your Cargo bin directory:
+## Assumptions and limits
 
-```bash
-cargo install --path .
-```
+- $\delta SA_{\text{composition}}$ neglected; acceptable for near-NSW compositions.
+- Fixed alkalinity fractions are pH-independent; accuracy drops for unusual pH/CO₂.
+- Cl⁻ by electroneutrality is sensitive to input errors.
+- Optional default F⁻ used if missing.
+- Iteration enforces consistency between volume-based inputs and mass-based reference.
+
+## Install (prebuilt binaries)
+
+Prebuilt binaries for macOS, Linux and Windows are available on the
+[Releases](https://github.com/u8array/salinity_cli_rs/releases) page.
+
+- macOS: download the macOS binary for your architecture (Apple Silicon/Intel),
+  make it executable and put it on your PATH.
+  
+  ```bash
+  chmod +x ./salinity_teos_10
+  ./salinity_teos_10 --help
+  ```
+
+- Linux: download the Linux binary, make it executable and put it on your PATH.
+  
+  ```bash
+  chmod +x ./salinity_teos_10
+  ./salinity_teos_10 --help
+  ```
+
+- Windows: download `salinity_teos_10.exe` and run it from PowerShell or CMD.
+  
+  ```powershell
+  .\salinity_teos_10.exe --help
+  ```
+
+Optional but recommended:
+
+- Verify checksums/signatures if provided on the release.
+- On macOS, if Gatekeeper blocks execution, you can right‑click → Open once
+  or allow the binary in System Settings. Alternatively, remove the quarantine
+  attribute:
+  
+  ```bash
+  xattr -d com.apple.quarantine ./salinity_teos_10
+  ```
 
 ## Quick start
 
@@ -66,14 +124,6 @@ Run:
 ```bash
 salinity_teos_10 --input inputs.json
 ```
-
-Notes:
-
-- To automatically estimate Cl⁻ via electroneutrality, omit `cl` in JSON or set it to `null`.
-- For structured JSON output, add `--json`.
-- The library supports component tables when `"return_components": true`. The current CLI ignores this flag and prints a summary only.
-
----
 
 ## Background
 
@@ -194,54 +244,28 @@ $$
   ext{norm\_factor}=\frac{35}{SP},\qquad m^\star=m\cdot\text{norm\_factor}.
 $$
 
----
-
-## CLI usage
-
-The binary accepts JSON inputs for measurements and assumptions:
-
-- `--inputs-json <JSON>`: Inline JSON for input values (schema like `Inputs`).
-- `--assumptions-json <JSON>`: Optional, adds/overrides assumptions (schema like `Assumptions`).
-- `--input <FILE>`: Read a file containing an object with `inputs` and optional `assumptions`. Use `-` for stdin.
-- `--json`: Output in JSON format (otherwise human-readable lines for SP/SA/Density/SG).
-
-JSON fields (excerpt):
-
-- Inputs (mg/L unless noted): `na, ca, mg, k, sr, br, s, b, cl` (optional; omit or set `null` for auto-estimate), `f` (optional)
-- Conditions: `t_c` (°C, default 20), `p_dbar` (dbar, default 0)
-- Alkalinity/options: `alk_dkh` (dKH), `assume_borate` (default true), `borate_fraction`, `ref_alk_dkh` (default 8.0), `alk_mg_per_meq`, `default_f_mg_l` (default 1.296), `return_components` (default false; currently ignored by CLI output)
-
----
-
-## Output example
-
-```text
-SP: 34.9800
-SA: 35.1600 g/kg
-Density: 1024.600 kg/m^3
-SG 20/20: 1.02600
-SG 25/25: 1.02480
-```
-
-Note: Component tables (mg/L, mg/kg, SP=35 normalization) are supported in the library API; the current CLI prints the summary shown above.
-
-## Assumptions and limits
-
-- $\delta SA_{\text{composition}}$ neglected; acceptable for near-NSW compositions.
-- Fixed alkalinity fractions are pH-independent; accuracy drops for unusual pH/CO₂.
-- Cl⁻ by electroneutrality is sensitive to input errors.
-- Optional default F⁻ used if missing.
-- Iteration enforces consistency between volume-based inputs and mass-based reference.
-
 ## Validation
 
 Compare `SP` against conductivity-derived `SP` and ensure TEOS-10 `ρ(SA,CT,p)` matches expected densities at 20 °C or 25 °C for typical reef mixes.
 
-## Acknowledgments
+## References
 
-- TEOS-10 thermodynamic framework  
-- Standard seawater reference $SR_{\mathrm{REF}}=35.16504\ \mathrm{g/kg}$
+- McDougall, T. J., and P. M. Barker (2011): Getting Started with TEOS‑10 and the Gibbs Seawater (GSW) Oceanographic Toolbox. TEOS‑10 Publication. [https://www.teos-10.org/pubs/Getting_Started.pdf](https://www.teos-10.org/pubs/Getting_Started.pdf)
+- IOC, SCOR and IAPSO (2010): The International Thermodynamic Equation of Seawater – 2010 (TEOS‑10) Manual. TEOS‑10 Publication. [https://www.teos-10.org/pubs/TEOS-10_Manual.pdf](https://www.teos-10.org/pubs/TEOS-10_Manual.pdf)
+- Millero, F. J., R. Feistel, D. G. Wright, and T. J. McDougall (2008): The composition of Standard Seawater and the definition of the Reference‑Composition Salinity Scale. Deep‑Sea Research Part I, 55, 50–72. [https://doi.org/10.1016/j.dsr.2008.03.004](https://doi.org/10.1016/j.dsr.2008.03.004)
+- UNESCO (1981): The Practical Salinity Scale 1978 (PSS‑78). UNESCO Technical Papers in Marine Science No. 36.
 
-## Build
+Notes:
 
-Requires the latest stable Rust toolchain (see Install above).
+- In this tool, SA is taken as approximately equal to SR as per TEOS‑10; the constant SR_REF = 35.16504 g/kg follows Millero et al. (2008).
+- The fixed alkalinity split and borate fraction are practical approximations for aquarium contexts rather than strict thermodynamic speciation.
+
+## Build from source
+
+Requires the latest stable Rust toolchain.
+
+Build locally:
+
+```bash
+cargo build --release
+```
