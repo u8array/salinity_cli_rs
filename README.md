@@ -38,7 +38,7 @@ fn main() {
     alk_dkh: Some(8.0),
   };
 
-  // Environmental and reference assumptions live here
+  // Environmental and reference assumptions
   let ass = Assumptions { temp: 20.0, pressure_dbar: 0.0, ..Default::default() };
   let out = compute_summary(&inputs, &ass);
   println!(
