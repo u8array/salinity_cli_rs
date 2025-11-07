@@ -97,6 +97,7 @@ SG 25/25: 1.02480
 ## Feature flags
 
 - `cli` — enables the command‑line interface and pulls in the optional `clap` dependency. Not needed for library use.
+- `approx_ct` — enables a shallow‑water approximation for CT from t (CT≈θ via small adiabatic lapse). For aquaria/near‑surface use only; otherwise leave disabled (default).
 
 ## Quick start
 

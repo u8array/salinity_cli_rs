@@ -23,6 +23,7 @@ thiserror = "2.0"
 [features]
 default = []
 cli = ["clap"]
+approx_ct = []
 
 [[bin]]
 name = "salinity_rs"

@@ -1,5 +1,7 @@
 #[cfg(feature = "cli")]
 pub mod cli;
+#[cfg(feature = "approx_ct")]
+pub mod manual_ct;
 pub mod teos10;
 
 #[cfg(feature = "cli")]
