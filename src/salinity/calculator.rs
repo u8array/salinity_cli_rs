@@ -4,6 +4,8 @@ use crate::models::{Assumptions, Inputs};
 use serde::Serialize;
 
 #[cfg(not(feature = "std"))]
+use alloc::vec;
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
 /// Result of a salinity calculation.
