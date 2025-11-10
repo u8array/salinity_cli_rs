@@ -35,7 +35,7 @@
 //!
 //! let (n_hco3, n_co3, n_oh, _alk_mass) = alk_species_from_dkh(8.0, None);
 //! let (_n_boric, n_borate) = boron_partition(4.0, BORATE_FRACTION_DEFAULT);
-//! let inputs = Inputs { na: 10780.0, mg: 1290.0, ca: 430.0, k: 380.0, sr: 8.0, s: 910.0, br: 65.0, f: None };
+//! let inputs = Inputs { na: 10780.0, mg: 1290.0, ca: 430.0, k: 380.0, sr: 8.0, br: 65.0, cl: None, f: None, s: 910.0, b: 4.0, alk_dkh: Some(8.0) };
 //! let cl_mg_l = estimate_cl_mg_l(&inputs, 1.3, n_borate, n_hco3, n_co3, n_oh);
 //! assert!(cl_mg_l > 0.0);
 //! ```
@@ -113,6 +113,11 @@ pub const MG_PER_MEQ_AS_CACO3: f64 = 50.043; // mg/meq as CaCO3
 
 pub const TINY: f64 = 1e-20;
 pub const MIN_CL_MG_L: f64 = 0.0;
+/// Blend factor used when combining charge-balance and ratio-based chloride estimates.
+pub const RATIO_BLEND_ALPHA: f64 = 0.6;
+/// Threshold (fraction) below which the charge-balance estimate is considered a strong underestimation
+/// and the ratio-based estimate is preferred entirely.
+pub const RATIO_BLEND_THRESHOLD: f64 = 0.8;
 
 use crate::models::Inputs;
 
@@ -261,7 +266,8 @@ pub fn estimate_cl_mg_l(
     // 1) Charge-balance-based estimate (mol/L)
     let mg_l_charge =
         estimate_cl_mg_l_from_charge_balance(inp, default_f_mg_l, n_borate, n_hco3, n_co3, n_oh);
-    let n_cl_charge = (mg_l_charge / 1000.0) / M_CL.max(TINY);
+    // convert mg/L -> mol/L and divide by chloride molar mass (M_CL is constant > 0)
+    let n_cl_charge = (mg_l_charge / 1000.0) / M_CL;
 
     // 2) Ratio-based candidates (mol/L)
     // Reference molar ratios r_i = REF_MMOL_i / REF_MMOL_CL
@@ -285,34 +291,27 @@ pub fn estimate_cl_mg_l(
     let so4_mg_l = (inp.s / M_S) * M_SO4;
     let n_so4 = mol_per_l(so4_mg_l, M_SO4);
 
-    // Candidate n_cl from each species (ignore invalid/zero)
-    let mut sum_w = 0.0;
-    let mut sum_w_ncl = 0.0;
+    // Candidate n_cl from each species (ignore invalid/zero) using an iterator-based fold.
+    let species: &[(f64, f64, f64)] = &[
+        (REF_MMOL_NA, n_na, r_na),
+        (REF_MMOL_MG, n_mg, r_mg),
+        (REF_MMOL_CA, n_ca, r_ca),
+        (REF_MMOL_K, n_k, r_k),
+        (REF_MMOL_SR, n_sr, r_sr),
+        (REF_MMOL_BR, n_br, r_br),
+        (REF_MMOL_SO4, n_so4, r_so4),
+    ];
 
-    // Weights: proportional to reference molar fraction – Na is strongest, Sr/Br are weaker
-    let w_na = REF_MMOL_NA;
-    let w_mg = REF_MMOL_MG;
-    let w_ca = REF_MMOL_CA;
-    let w_k = REF_MMOL_K;
-    let w_sr = REF_MMOL_SR;
-    let w_br = REF_MMOL_BR;
-    let w_so4 = REF_MMOL_SO4;
-
-    let add_candidate = |sum_w: &mut f64, sum_w_ncl: &mut f64, w: f64, n_i: f64, r_i: f64| {
-        if w > 0.0 && r_i > 0.0 && n_i > 0.0 {
-            let n_cl_i = n_i / r_i;
-            *sum_w += w;
-            *sum_w_ncl += w * n_cl_i;
-        }
-    };
-
-    add_candidate(&mut sum_w, &mut sum_w_ncl, w_na, n_na, r_na);
-    add_candidate(&mut sum_w, &mut sum_w_ncl, w_mg, n_mg, r_mg);
-    add_candidate(&mut sum_w, &mut sum_w_ncl, w_ca, n_ca, r_ca);
-    add_candidate(&mut sum_w, &mut sum_w_ncl, w_k, n_k, r_k);
-    add_candidate(&mut sum_w, &mut sum_w_ncl, w_sr, n_sr, r_sr);
-    add_candidate(&mut sum_w, &mut sum_w_ncl, w_br, n_br, r_br);
-    add_candidate(&mut sum_w, &mut sum_w_ncl, w_so4, n_so4, r_so4);
+    let (sum_w, sum_w_ncl) = species
+        .iter()
+        .fold((0.0, 0.0), |(sw, swn), &(w, n_i, r_i)| {
+            if w > 0.0 && r_i > 0.0 && n_i > 0.0 {
+                let n_cl_i = n_i / r_i;
+                (sw + w, swn + w * n_cl_i)
+            } else {
+                (sw, swn)
+            }
+        });
 
     let n_cl_ratio = if sum_w > 0.0 {
         (sum_w_ncl / sum_w).max(0.0)
@@ -324,11 +323,10 @@ pub fn estimate_cl_mg_l(
     // If the charge-balance estimate is significantly lower than the ratio-based estimate (underestimation), use the ratio estimate entirely.
     // Otherwise, apply a moderate blend.
     let n_cl_blend = if n_cl_ratio > 0.0 {
-        if n_cl_charge < 0.8 * n_cl_ratio {
+        if n_cl_charge < RATIO_BLEND_THRESHOLD * n_cl_ratio {
             n_cl_ratio
         } else {
-            let alpha = 0.6;
-            alpha * n_cl_charge + (1.0 - alpha) * n_cl_ratio
+            RATIO_BLEND_ALPHA * n_cl_charge + (1.0 - RATIO_BLEND_ALPHA) * n_cl_ratio
         }
     } else {
         n_cl_charge
