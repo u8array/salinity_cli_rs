@@ -51,15 +51,14 @@ pub struct Inputs {
 
 impl Assumptions {
     pub fn normalized(mut self) -> Self {
-        if self.rn_compat {
-            if self
+        if self.rn_compat
+            && self
                 .ref_alk_dkh
                 .map(|v| (v - crate::chemistry::DEFAULT_REF_ALK_DKH).abs() < f64::EPSILON)
                 .unwrap_or(true)
             {
                 self.ref_alk_dkh = Some(6.2);
             }
-        }
         self
     }
 }
