@@ -24,15 +24,7 @@ fn cli_works_without_assumptions_with_inputs_json() {
         "f": 1.14,
         "s": 814.0,
         "b": 5.57,
-        "t_c": 20.0,
-        "p_dbar": 0.0,
-        "alk_dkh": null,
-        "assume_borate": true,
-        "default_f_mg_l": 1.296,
-        "ref_alk_dkh": 8.0,
-        "borate_fraction": null,
-        "alk_mg_per_meq": null,
-        "return_components": false,
+        "alk_dkh": null
     })
     .to_string();
 
@@ -59,15 +51,7 @@ fn cli_works_without_assumptions_in_stdin_input_document() {
             "f": 1.14,
             "s": 814.0,
             "b": 5.57,
-            "t_c": 20.0,
-            "p_dbar": 0.0,
-            "alk_dkh": null,
-            "assume_borate": true,
-            "default_f_mg_l": 1.296,
-            "ref_alk_dkh": 8.0,
-            "borate_fraction": null,
-            "alk_mg_per_meq": null,
-            "return_components": false
+            "alk_dkh": null
         }
     })
     .to_string();
