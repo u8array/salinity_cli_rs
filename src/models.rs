@@ -56,9 +56,9 @@ impl Assumptions {
                 .ref_alk_dkh
                 .map(|v| (v - crate::chemistry::DEFAULT_REF_ALK_DKH).abs() < f64::EPSILON)
                 .unwrap_or(true)
-            {
-                self.ref_alk_dkh = Some(6.2);
-            }
+        {
+            self.ref_alk_dkh = Some(6.2);
+        }
         self
     }
 }
