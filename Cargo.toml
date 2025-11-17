@@ -12,6 +12,7 @@ categories = ["science", "command-line-utilities"]
 [lib]
 name = "salinity_rs"
 path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 gsw = "0.2.3"
@@ -25,6 +26,7 @@ default = ["std"]
 std = ["thiserror"]
 cli = ["dep:clap", "dep:serde_json", "std"]
 approx_ct = []
+ffi = ["dep:serde_json", "std"]
 
 [[bin]]
 name = "salinity_rs"
