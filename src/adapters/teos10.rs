@@ -14,15 +14,18 @@ pub fn sa_from_sp(sp: f64) -> f64 {
 pub fn ct_from_t(sa: f64, temp: f64, p_dbar: f64) -> f64 {
     #[cfg(feature = "approx_ct")]
     {
-        return ct_from_t_manual(sa, temp, p_dbar);
+        ct_from_t_manual(sa, temp, p_dbar)
     }
 
     // Currently a placeholder: CT ≈ t. The difference CT−t is small near
     // surface pressures but non-zero in general.
     // Todo: Replace with a proper t→CT conversion when the gsw crate exposes it.
-    let _ = sa;
-    let _ = p_dbar;
-    temp
+    #[cfg(not(feature = "approx_ct"))]
+    {
+        let _ = sa;
+        let _ = p_dbar;
+        temp
+    }
 }
 
 /// In-situ density ρ frofm SA, CT and p (TEOS-10, 75-term polynomial).
