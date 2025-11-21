@@ -3,6 +3,8 @@ pub mod cli;
 #[cfg(feature = "approx_ct")]
 pub mod manual_ct;
 pub mod teos10;
+#[cfg(not(feature = "approx_ct"))]
+pub mod teos10_reduced;
 
 #[cfg(feature = "cli")]
 use clap::Parser;
